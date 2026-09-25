@@ -14,6 +14,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin, UUIDPrimaryKeyMixin
 
 if TYPE_CHECKING:
+    from app.models.occurrence import Occurrence
     from app.models.schedule import Schedule
     from app.models.user import User
 
@@ -83,6 +84,10 @@ class Habit(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         back_populates="habit",
         lazy="selectin",
         order_by="Schedule.effective_from.desc()",
+    )
+    occurrences: Mapped[list[Occurrence]] = relationship(  # noqa: F821
+        back_populates="habit",
+        cascade="all, delete-orphan",
     )
 
     __table_args__ = (

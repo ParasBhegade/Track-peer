@@ -124,6 +124,9 @@ async def create_habit(db: AsyncSession, user: User, payload: HabitCreate) -> Ha
     )
     db.add(schedule)
     
+    from app.services.occurrence_service import generate_today_if_due
+    await generate_today_if_due(db, user, habit)
+    
     await db.commit()
     await db.refresh(habit, ["schedules"])
     return _attach_schedules(habit, user)
@@ -178,7 +181,9 @@ async def update_schedule(db: AsyncSession, habit_id: UUID, user: User, payload:
         # Update the habit's frequency label
         habit.frequency = freq
 
-    # TODO (Phase 4): Delete stale PENDING future occurrences here
+    # Delete stale PENDING future occurrences
+    from app.services.occurrence_service import cancel_future_pending
+    await cancel_future_pending(db, user, habit.id)
 
     await db.commit()
     await db.refresh(habit, ["schedules"])
@@ -190,6 +195,8 @@ async def archive_habit(db: AsyncSession, habit_id: UUID, user: User) -> None:
     if habit.archived_at is None:
         # use UTC for system timestamps
         habit.archived_at = datetime.now(ZoneInfo("UTC"))
+        from app.services.occurrence_service import cancel_future_pending
+        await cancel_future_pending(db, user, habit.id)
         await db.commit()
 
 
@@ -250,6 +257,9 @@ async def create_habit_from_sheet(db: AsyncSession, user: User, payload: HabitFr
         effective_from=start_date,
     )
     db.add(schedule)
+    
+    from app.services.occurrence_service import generate_today_if_due
+    await generate_today_if_due(db, user, habit)
     
     await db.commit()
     return await get_habit_or_404(db, habit.id, user)
