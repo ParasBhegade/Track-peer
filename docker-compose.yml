@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-habittracker}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-habittracker_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-habittracker}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-habittracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+
+volumes:
+  pg_data:
