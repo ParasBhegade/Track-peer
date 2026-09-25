@@ -61,7 +61,6 @@ class Habit(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         Boolean,
         default=False,
         nullable=False,
-        comment="true if cloned from a challenge template",
     )
     # Plain UUID — no FK constraint yet (Phase 3 §0 Gap #7).
     # FK added in the challenges migration to avoid circular dependency.

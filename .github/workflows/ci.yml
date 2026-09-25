@@ -57,3 +57,8 @@ jobs:
 
       - name: Test (pytest)
         run: python -m pytest -v
+
+      - name: Verify OpenAPI contract drift
+        run: |
+          python scripts/export_openapi.py
+          git diff --exit-code ../docs/openapi.json || (echo "OpenAPI schema drifted. Run scripts/export_openapi.py and commit the changes." && exit 1)
