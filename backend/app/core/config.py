@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     )
 
     # ── Redis ────────────────────────────────────────────
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://127.0.0.1:6379/0"
 
     # ── JWT / Security ───────────────────────────────────
     JWT_SECRET: str = "CHANGE-ME-generate-a-random-64-char-string"
