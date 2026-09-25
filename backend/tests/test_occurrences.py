@@ -242,3 +242,129 @@ async def test_archive_cleans_up_future_pending(client: AsyncClient, token: str)
     # Today's pending occurrence should be gone
     res = await client.get("/api/v1/today", headers=auth_headers(token))
     assert len(res.json()["occurrences"]) == 0
+
+
+async def test_past_day_modification(client: AsyncClient, token: str):
+    from sqlalchemy import update
+
+    from app.db.session import async_session_factory
+    
+    today = datetime.now(ZoneInfo("UTC")).date()
+    res = await client.post(
+        "/api/v1/habits",
+        headers=auth_headers(token),
+        json={"name": "Past Habit", "frequency": "daily", "days_of_week": [0,1,2,3,4,5,6], "start_date": today.isoformat()}
+    )
+    
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    occ_id = res.json()["occurrences"][0]["id"]
+    
+    past_date = today - timedelta(days=1)
+    
+    async with async_session_factory() as db:
+        await db.execute(update(Occurrence).where(Occurrence.id == occ_id).values(occurrence_date=past_date))
+        await db.commit()
+        
+    idem_key = str(uuid.uuid4())
+    headers = auth_headers(token)
+    headers["Idempotency-Key"] = idem_key
+    
+    res = await client.put(f"/api/v1/occurrences/{occ_id}", headers=headers, json={"status": "completed"})
+    assert res.status_code == 403
+    assert "Past occurrences are locked" in res.json()["error"]["message"]
+
+
+async def test_missing_idempotency_key(client: AsyncClient, token: str):
+    today = datetime.now(ZoneInfo("UTC")).date()
+    await client.post(
+        "/api/v1/habits",
+        headers=auth_headers(token),
+        json={"name": "No Key Habit", "frequency": "daily", "days_of_week": [0,1,2,3,4,5,6], "start_date": today.isoformat()}
+    )
+    
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    occ_id = res.json()["occurrences"][0]["id"]
+    
+    headers = auth_headers(token)
+    res = await client.put(f"/api/v1/occurrences/{occ_id}", headers=headers, json={"status": "completed"})
+    assert res.status_code == 422
+
+
+async def test_status_missed_mutation(client: AsyncClient, token: str):
+    today = datetime.now(ZoneInfo("UTC")).date()
+    await client.post(
+        "/api/v1/habits",
+        headers=auth_headers(token),
+        json={"name": "Missed Mut Habit", "frequency": "daily", "days_of_week": [0,1,2,3,4,5,6], "start_date": today.isoformat()}
+    )
+    
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    occ_id = res.json()["occurrences"][0]["id"]
+    
+    idem_key = str(uuid.uuid4())
+    headers = auth_headers(token)
+    headers["Idempotency-Key"] = idem_key
+    
+    res = await client.put(f"/api/v1/occurrences/{occ_id}", headers=headers, json={"status": "missed"})
+    assert res.status_code == 422
+    
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    assert res.json()["occurrences"][0]["status"] == "pending"
+
+
+async def test_range_92_days_accepted(client: AsyncClient, token: str):
+    today = datetime.now(ZoneInfo("UTC")).date()
+    from_date = today
+    to_date = today + timedelta(days=91)  # 91 days difference = 92 calendar days inclusive
+    
+    res = await client.get(f"/api/v1/occurrences?from_date={from_date.isoformat()}&to_date={to_date.isoformat()}", headers=auth_headers(token))
+    assert res.status_code == 200
+
+
+async def test_range_93_days_rejected(client: AsyncClient, token: str):
+    today = datetime.now(ZoneInfo("UTC")).date()
+    from_date = today
+    to_date = today + timedelta(days=92)  # 92 days difference = 93 calendar days inclusive
+    
+    res = await client.get(f"/api/v1/occurrences?from_date={from_date.isoformat()}&to_date={to_date.isoformat()}", headers=auth_headers(token))
+    assert res.status_code == 422
+
+
+async def test_future_occurrence_rejected(client: AsyncClient, token: str):
+    from sqlalchemy import update
+
+    from app.db.session import async_session_factory
+    
+    today = datetime.now(ZoneInfo("UTC")).date()
+    res = await client.post(
+        "/api/v1/habits",
+        headers=auth_headers(token),
+        json={"name": "Future Habit", "frequency": "daily", "days_of_week": [0,1,2,3,4,5,6], "start_date": today.isoformat()}
+    )
+    
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    occ_id = res.json()["occurrences"][0]["id"]
+    
+    future_date = today + timedelta(days=1)
+    
+    async with async_session_factory() as db:
+        await db.execute(update(Occurrence).where(Occurrence.id == occ_id).values(occurrence_date=future_date))
+        await db.commit()
+        
+    idem_key = str(uuid.uuid4())
+    headers = auth_headers(token)
+    headers["Idempotency-Key"] = idem_key
+    
+    res = await client.put(f"/api/v1/occurrences/{occ_id}", headers=headers, json={"status": "completed"})
+    assert res.status_code == 404
+    assert "Occurrence not found" in res.json()["error"]["message"]
+
+
+async def test_nonexistent_occurrence_rejected(client: AsyncClient, token: str):
+    occ_id = str(uuid.uuid4())
+    idem_key = str(uuid.uuid4())
+    headers = auth_headers(token)
+    headers["Idempotency-Key"] = idem_key
+    
+    res = await client.put(f"/api/v1/occurrences/{occ_id}", headers=headers, json={"status": "completed"})
+    assert res.status_code == 404
