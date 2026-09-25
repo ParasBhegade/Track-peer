@@ -486,6 +486,129 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "Occurrence": {
+        "properties": {
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "habit_id": {
+            "format": "uuid",
+            "title": "Habit Id",
+            "type": "string"
+          },
+          "habit_name": {
+            "title": "Habit Name",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "occurrence_date": {
+            "format": "date",
+            "title": "Occurrence Date",
+            "type": "string"
+          },
+          "reminder_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reminder Time"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "completed",
+              "skipped",
+              "missed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "habit_id",
+          "habit_name",
+          "occurrence_date",
+          "status"
+        ],
+        "title": "Occurrence",
+        "type": "object"
+      },
+      "OccurrenceListResponse": {
+        "properties": {
+          "occurrences": {
+            "items": {
+              "$ref": "#/components/schemas/Occurrence"
+            },
+            "title": "Occurrences",
+            "type": "array"
+          }
+        },
+        "required": [
+          "occurrences"
+        ],
+        "title": "OccurrenceListResponse",
+        "type": "object"
+      },
+      "OccurrenceUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "completed",
+              "skipped",
+              "pending"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "OccurrenceUpdate",
+        "type": "object"
+      },
+      "Progress": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "percent": {
+            "title": "Percent",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "completed",
+          "total",
+          "percent"
+        ],
+        "title": "Progress",
+        "type": "object"
+      },
       "RefreshRequest": {
         "properties": {
           "refresh_token": {
@@ -703,6 +826,32 @@
           "target"
         ],
         "title": "SheetHabitView",
+        "type": "object"
+      },
+      "TodayResponse": {
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "occurrences": {
+            "items": {
+              "$ref": "#/components/schemas/Occurrence"
+            },
+            "title": "Occurrences",
+            "type": "array"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/Progress"
+          }
+        },
+        "required": [
+          "date",
+          "occurrences",
+          "progress"
+        ],
+        "title": "TodayResponse",
         "type": "object"
       },
       "Tokens": {
@@ -1621,6 +1770,168 @@
         "tags": [
           "Health"
         ]
+      }
+    },
+    "/api/v1/occurrences": {
+      "get": {
+        "description": "Get occurrences in a date range.",
+        "operationId": "get_occurrences_api_v1_occurrences_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "From Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "To Date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "habit_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Habit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OccurrenceListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Occurrences"
+      }
+    },
+    "/api/v1/occurrences/{occurrence_id}": {
+      "put": {
+        "description": "Update occurrence status with idempotency.",
+        "operationId": "update_occurrence_api_v1_occurrences__occurrence_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "occurrence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Occurrence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OccurrenceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Occurrence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Update Occurrence"
+      }
+    },
+    "/api/v1/today": {
+      "get": {
+        "description": "Get today's occurrences and progress summary.",
+        "operationId": "get_today_api_v1_today_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TodayResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Today"
       }
     },
     "/api/v1/users/me": {
