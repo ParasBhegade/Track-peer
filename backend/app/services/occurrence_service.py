@@ -139,7 +139,9 @@ async def get_today(db: AsyncSession, user: User) -> TodayResponse:
 async def get_occurrences(
     db: AsyncSession, user: User, from_date: date, to_date: date, habit_id: UUID | None = None
 ) -> OccurrenceListResponse:
-    if (to_date - from_date).days > 92:
+    # Inclusive calendar days = (to_date - from_date).days + 1
+    # 92 inclusive calendar days = 91 days difference
+    if (to_date - from_date).days > 91:
         raise AppError(422, "validation_error", "Date range cannot exceed 92 days")
 
     if habit_id:
