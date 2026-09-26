@@ -69,6 +69,7 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
@@ -108,14 +109,26 @@ export default function App() {
           autoCapitalize="none"
           keyboardType="email-address"
         />
-        <TextInput
-          style={styles.input}
-          placeholder="PASSWORD"
-          placeholderTextColor={colors['on-surface-variant']}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={[styles.input, styles.passwordInput]}
+            placeholder="PASSWORD"
+            placeholderTextColor={colors['on-surface-variant']}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity 
+            style={styles.eyeIcon} 
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <MaterialIcons 
+              name={showPassword ? "visibility-off" : "visibility"} 
+              size={24} 
+              color={colors.primary} 
+            />
+          </TouchableOpacity>
+        </View>
 
         {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
 
@@ -163,6 +176,21 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     ...typography.headlineMd,
     color: colors.primary,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: colors.primary,
+    marginBottom: spacing.lg,
+  },
+  passwordInput: {
+    flex: 1,
+    borderBottomWidth: 0,
+    marginBottom: 0,
+  },
+  eyeIcon: {
+    padding: spacing.xs,
   },
   loginBtn: {
     backgroundColor: colors['secondary-container'],
