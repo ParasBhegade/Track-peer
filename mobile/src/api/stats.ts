@@ -16,11 +16,11 @@ export interface HabitStats {
 }
 
 export async function getStatsOverview(): Promise<AccountStats> {
-  const { data } = await apiClient.get<AccountStats>("/stats/overview");
+  const { data } = await apiClient.get<AccountStats>("/api/v1/stats/overview");
   return data;
 }
 
 export async function getHabitStats(habitId: string): Promise<HabitStats> {
-  const { data } = await apiClient.get<HabitStats>(`/habits/${habitId}/stats`);
+  const { data } = await apiClient.get<HabitStats>(`/api/v1/habits/${habitId}/stats`);
   return data;
 }

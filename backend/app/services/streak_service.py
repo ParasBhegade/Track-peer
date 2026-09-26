@@ -90,8 +90,11 @@ async def recalculate_habit_aggregates(db: AsyncSession, habit_id: UUID, user: U
             elif occ and occ.status == OccurrenceStatus.pending and d == today:
                 # Today is still open. Does not break the streak, does not add to it.
                 continue
+            elif occ and occ.status == OccurrenceStatus.skipped:
+                # Skipped does not break the streak, does not add to it.
+                continue
             else:
-                # SKIPPED, MISSED, or missing occurrence (which means not completed)
+                # MISSED or missing occurrence (which means not completed/skipped/pending-today)
                 current_broken = True
                 current_run = 0
 

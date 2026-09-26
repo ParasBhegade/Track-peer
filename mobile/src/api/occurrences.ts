@@ -24,8 +24,19 @@ export interface TodayResponse {
   progress: Progress;
 }
 
+export interface OccurrenceListResponse {
+  occurrences: Occurrence[];
+}
+
 export const fetchToday = async (): Promise<TodayResponse> => {
   const response = await apiClient.get<TodayResponse>('/api/v1/today');
+  return response.data;
+};
+
+export const fetchOccurrences = async (fromDate: string, toDate: string): Promise<OccurrenceListResponse> => {
+  const response = await apiClient.get<OccurrenceListResponse>('/api/v1/occurrences', {
+    params: { from_date: fromDate, to_date: toDate }
+  });
   return response.data;
 };
 

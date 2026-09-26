@@ -12,7 +12,7 @@ export interface CalendarSummaryResponse {
 }
 
 export async function getCalendarSummary(year: number, month: number): Promise<CalendarSummaryResponse> {
-  const { data } = await apiClient.get<CalendarSummaryResponse>("/calendar/summary", {
+  const { data } = await apiClient.get<CalendarSummaryResponse>("/api/v1/calendar/summary", {
     params: { year, month },
   });
   return data;
