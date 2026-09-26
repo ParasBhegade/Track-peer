@@ -1,6 +1,41 @@
 {
   "components": {
     "schemas": {
+      "AccountStatsResponse": {
+        "properties": {
+          "best_current_streak": {
+            "title": "Best Current Streak",
+            "type": "integer"
+          },
+          "total_active_habits": {
+            "title": "Total Active Habits",
+            "type": "integer"
+          },
+          "total_lifetime_completions": {
+            "title": "Total Lifetime Completions",
+            "type": "integer"
+          },
+          "weekly_completion_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Completion Percent"
+          }
+        },
+        "required": [
+          "total_active_habits",
+          "weekly_completion_percent",
+          "best_current_streak",
+          "total_lifetime_completions"
+        ],
+        "title": "AccountStatsResponse",
+        "type": "object"
+      },
       "AuthResponse": {
         "properties": {
           "tokens": {
@@ -15,6 +50,58 @@
           "tokens"
         ],
         "title": "AuthResponse",
+        "type": "object"
+      },
+      "CalendarDaySummary": {
+        "properties": {
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percent"
+          },
+          "scheduled": {
+            "title": "Scheduled",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "scheduled",
+          "completed",
+          "percent"
+        ],
+        "title": "CalendarDaySummary",
+        "type": "object"
+      },
+      "CalendarSummaryResponse": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/CalendarDaySummary"
+            },
+            "title": "Days",
+            "type": "array"
+          }
+        },
+        "required": [
+          "days"
+        ],
+        "title": "CalendarSummaryResponse",
         "type": "object"
       },
       "ForgotPasswordRequest": {
@@ -421,6 +508,53 @@
           "habits"
         ],
         "title": "HabitSheetView",
+        "type": "object"
+      },
+      "HabitStatsResponse": {
+        "properties": {
+          "current_streak": {
+            "title": "Current Streak",
+            "type": "integer"
+          },
+          "longest_streak": {
+            "title": "Longest Streak",
+            "type": "integer"
+          },
+          "monthly_completion_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monthly Completion Percent"
+          },
+          "total_completions": {
+            "title": "Total Completions",
+            "type": "integer"
+          },
+          "weekly_completion_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weekly Completion Percent"
+          }
+        },
+        "required": [
+          "current_streak",
+          "longest_streak",
+          "total_completions",
+          "weekly_completion_percent",
+          "monthly_completion_percent"
+        ],
+        "title": "HabitStatsResponse",
         "type": "object"
       },
       "HabitUpdate": {
@@ -1362,6 +1496,66 @@
         "summary": "Register"
       }
     },
+    "/api/v1/calendar/summary": {
+      "get": {
+        "operationId": "get_summary_api_v1_calendar_summary_get",
+        "parameters": [
+          {
+            "description": "4-digit year",
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "description": "4-digit year",
+              "title": "Year",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Month 1-12",
+            "in": "query",
+            "name": "month",
+            "required": true,
+            "schema": {
+              "description": "Month 1-12",
+              "title": "Month",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarSummaryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Summary",
+        "tags": [
+          "calendar"
+        ]
+      }
+    },
     "/api/v1/habit-sheets": {
       "get": {
         "operationId": "get_habit_sheets_api_v1_habit_sheets_get",
@@ -1748,6 +1942,51 @@
         "summary": "Update Schedule"
       }
     },
+    "/api/v1/habits/{habit_id}/stats": {
+      "get": {
+        "operationId": "get_habit_stats_api_v1_habits__habit_id__stats_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "habit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Habit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HabitStatsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Habit Stats"
+      }
+    },
     "/api/v1/health": {
       "get": {
         "description": "Basic health check \u2014 verifies the service is running.",
@@ -1908,6 +2147,32 @@
           }
         ],
         "summary": "Update Occurrence"
+      }
+    },
+    "/api/v1/stats/overview": {
+      "get": {
+        "operationId": "get_overview_api_v1_stats_overview_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountStatsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Overview",
+        "tags": [
+          "stats"
+        ]
       }
     },
     "/api/v1/today": {

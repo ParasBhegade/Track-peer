@@ -2,9 +2,62 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFonts, SpaceGrotesk_700Bold, SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk';
 import { Inter_400Regular } from '@expo-google-fonts/inter';
-import { TodayScreen } from './src/features/TodayScreen';
 import { login } from './src/api/auth';
 import { colors, typography, spacing } from './src/theme';
+import { TodayScreen } from './src/features/TodayScreen';
+import { CalendarScreen } from './src/features/CalendarScreen';
+import { StatsScreen } from './src/features/StatsScreen';
+import { HabitDetailsScreen } from './src/features/HabitDetailsScreen';
+import { NavigationContainer } from '@react-navigation/native';
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { MaterialIcons } from '@expo/vector-icons';
+
+const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+
+function HomeStack() {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="TodayMain" component={TodayScreen} />
+      <Stack.Screen name="HabitDetails" component={HabitDetailsScreen} />
+    </Stack.Navigator>
+  );
+}
+
+function AuthenticatedApp() {
+  return (
+    <NavigationContainer>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors['on-surface-variant'],
+          tabBarStyle: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.outline,
+          },
+        }}
+      >
+        <Tab.Screen 
+          name="Today" 
+          component={HomeStack} 
+          options={{ tabBarIcon: ({ color }) => <MaterialIcons name="check-circle" size={24} color={color} /> }} 
+        />
+        <Tab.Screen 
+          name="Calendar" 
+          component={CalendarScreen} 
+          options={{ tabBarIcon: ({ color }) => <MaterialIcons name="calendar-today" size={24} color={color} /> }} 
+        />
+        <Tab.Screen 
+          name="Stats" 
+          component={StatsScreen} 
+          options={{ tabBarIcon: ({ color }) => <MaterialIcons name="bar-chart" size={24} color={color} /> }} 
+        />
+      </Tab.Navigator>
+    </NavigationContainer>
+  );
+}
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -77,7 +130,7 @@ export default function App() {
     );
   }
 
-  return <TodayScreen />;
+  return <AuthenticatedApp />;
 }
 
 const styles = StyleSheet.create({

@@ -250,6 +250,10 @@ async def update_occurrence(
         occ.completed_at = None
 
     occ.idempotency_key = idempotency_key
+
+    from app.services.streak_service import recalculate_habit_aggregates
+    await recalculate_habit_aggregates(db, occ.habit_id, user)
+
     await db.commit()
 
     schedule = await schedule_for(db, occ.habit_id, occ.occurrence_date)

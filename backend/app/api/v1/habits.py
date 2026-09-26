@@ -18,7 +18,8 @@ from app.schemas.habits import (
     HabitUpdate,
     ScheduleUpdate,
 )
-from app.services import habit_service
+from app.schemas.stats import HabitStatsResponse
+from app.services import habit_service, stats_service
 
 router = APIRouter()
 
@@ -96,3 +97,11 @@ async def update_schedule(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     return await habit_service.update_schedule(db, habit_id, current_user, payload)
+
+@router.get("/{habit_id}/stats", response_model=HabitStatsResponse)
+async def get_habit_stats(
+    habit_id: UUID,
+    current_user: DBUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    return await stats_service.get_habit_stats(db, current_user, habit_id)

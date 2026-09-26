@@ -6,7 +6,7 @@ import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { MaterialIcons } from '@expo/vector-icons';
 
-export const TodayScreen = () => {
+export const TodayScreen = ({ navigation }: any) => {
   const [data, setData] = useState<TodayResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -148,10 +148,13 @@ export const TodayScreen = () => {
             const isPending = occ.status === 'pending';
 
             return (
-              <View key={occ.id} style={[
+              <TouchableOpacity key={occ.id} style={[
                 styles.habitCard,
                 isCompleted && styles.habitCardCompleted
-              ]}>
+              ]}
+              onPress={() => navigation.navigate('HabitDetails', { habitId: occ.habit_id, habitName: occ.habit_name })}
+              activeOpacity={0.8}
+              >
                 <View style={styles.habitTop}>
                   <View style={styles.habitInfo}>
                     {isCompleted && (
@@ -197,7 +200,7 @@ export const TodayScreen = () => {
                      <Text style={styles.missedText}>MISSED - LOCKED</Text>
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

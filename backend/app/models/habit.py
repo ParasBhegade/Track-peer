@@ -7,7 +7,17 @@ import uuid
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, Index, String, Text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+)
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -75,6 +85,21 @@ class Habit(Base, UUIDPrimaryKeyMixin, TimestampMixin):
         nullable=True,
         comment="soft delete",
     )
+    current_streak: Mapped[int] = mapped_column(
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+    longest_streak: Mapped[int] = mapped_column(
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
+    total_completions: Mapped[int] = mapped_column(
+        default=0,
+        server_default="0",
+        nullable=False,
+    )
 
     # ── Relationships ────────────────────────────────────
     user: Mapped[User] = relationship(  # noqa: F821
@@ -93,4 +118,8 @@ class Habit(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     __table_args__ = (
         # Partial index: active habits per user (Phase 2 §3 scalability checklist)
         Index("ix_habits_user_id_active", "user_id", postgresql_where="archived_at IS NULL"),
+        CheckConstraint("current_streak >= 0", name="chk_habit_current_streak_positive"),
+        CheckConstraint("longest_streak >= 0", name="chk_habit_longest_streak_positive"),
+        CheckConstraint("longest_streak >= current_streak", name="chk_habit_longest_streak_gte_current"),
+        CheckConstraint("total_completions >= 0", name="chk_habit_total_completions_positive"),
     )
