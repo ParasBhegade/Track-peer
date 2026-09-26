@@ -1,8 +1,9 @@
 """Tests for Habit CRUD and Schedule Versioning."""
 
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, patch
+from zoneinfo import ZoneInfo
 
 import pytest
 from httpx import AsyncClient
@@ -67,18 +68,28 @@ async def test_create_habit(client: AsyncClient):
 async def test_create_habit_past_start_date(client: AsyncClient):
     token, _ = await register_and_get_token(client)
 
-    past = (date.today() - timedelta(days=1)).isoformat()
-    res = await client.post(
-        "/api/v1/habits",
-        headers=auth_headers(token),
-        json={
-            "name": "Past Habit",
-            "frequency": "daily",
-            "days_of_week": [0, 1, 2, 3, 4, 5, 6],
-            "start_date": past,
-        },
-    )
-    assert res.status_code == 422
+    fake_utc_now = datetime(2026, 9, 15, 12, 0, 0, tzinfo=ZoneInfo("UTC"))
+    class FakeDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return fake_utc_now.replace(tzinfo=None)
+            return fake_utc_now.astimezone(tz)
+            
+    with patch("app.services.habit_service.datetime", FakeDatetime):
+        today = fake_utc_now.date()
+        past = (today - timedelta(days=1)).isoformat()
+        res = await client.post(
+            "/api/v1/habits",
+            headers=auth_headers(token),
+            json={
+                "name": "Past Habit",
+                "frequency": "daily",
+                "days_of_week": [0, 1, 2, 3, 4, 5, 6],
+                "start_date": past,
+            },
+        )
+        assert res.status_code == 422
 
 
 # ── T3: Frequency Normalization ───────────────────────

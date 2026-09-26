@@ -137,36 +137,47 @@ async def test_historical_schedule_immutability(client: AsyncClient):
 async def test_pending_schedule_resolution(client: AsyncClient):
     token, user = await register_and_get_token(client)
     
-    today_str = date.today().isoformat()
-    # A. No future schedule -> pending_schedule is null
-    res = await client.post(
-        "/api/v1/habits",
-        headers=auth_headers(token),
-        json={"name": "Pending Habit", "frequency": "daily", "days_of_week": [0, 1, 2, 3, 4, 5, 6], "start_date": today_str},
-    )
-    assert res.status_code == 201
-    habit_id = res.json()["id"]
-    assert res.json()["pending_schedule"] is None
-    
-    # B. One future schedule -> that schedule is returned
-    d1_str = (date.today() + timedelta(days=1)).isoformat()
-    s1_res = await client.put(
-        f"/api/v1/habits/{habit_id}/schedule",
-        headers=auth_headers(token),
-        json={"frequency": "weekdays", "days_of_week": [0, 1, 2, 3, 4], "effective_from": d1_str},
-    )
-    assert s1_res.status_code == 200
-    assert s1_res.json()["pending_schedule"]["effective_from"] == d1_str
-    
-    # C. Multiple future schedules -> EARLIEST future schedule is returned
-    d3_str = (date.today() + timedelta(days=3)).isoformat()
-    s3_res = await client.put(
-        f"/api/v1/habits/{habit_id}/schedule",
-        headers=auth_headers(token),
-        json={"frequency": "custom", "days_of_week": [1, 3], "effective_from": d3_str},
-    )
-    assert s3_res.status_code == 200
-    assert s3_res.json()["pending_schedule"]["effective_from"] == d1_str  # D1 is earlier than D3
+    fake_utc_now = datetime(2026, 9, 15, 12, 0, 0, tzinfo=ZoneInfo("UTC"))
+    class FakeDatetime:
+        @classmethod
+        def now(cls, tz=None):
+            if tz is None:
+                return fake_utc_now.replace(tzinfo=None)
+            return fake_utc_now.astimezone(tz)
+            
+    with patch("app.services.habit_service.datetime", FakeDatetime):
+        today = fake_utc_now.date()
+        today_str = today.isoformat()
+        
+        # A. No future schedule -> pending_schedule is null
+        res = await client.post(
+            "/api/v1/habits",
+            headers=auth_headers(token),
+            json={"name": "Pending Habit", "frequency": "daily", "days_of_week": [0, 1, 2, 3, 4, 5, 6], "start_date": today_str},
+        )
+        assert res.status_code == 201
+        habit_id = res.json()["id"]
+        assert res.json()["pending_schedule"] is None
+        
+        # B. One future schedule -> that schedule is returned
+        d1_str = (today + timedelta(days=1)).isoformat()
+        s1_res = await client.put(
+            f"/api/v1/habits/{habit_id}/schedule",
+            headers=auth_headers(token),
+            json={"frequency": "weekdays", "days_of_week": [0, 1, 2, 3, 4], "effective_from": d1_str},
+        )
+        assert s1_res.status_code == 200
+        assert s1_res.json()["pending_schedule"]["effective_from"] == d1_str
+        
+        # C. Multiple future schedules -> EARLIEST future schedule is returned
+        d3_str = (today + timedelta(days=3)).isoformat()
+        s3_res = await client.put(
+            f"/api/v1/habits/{habit_id}/schedule",
+            headers=auth_headers(token),
+            json={"frequency": "custom", "days_of_week": [1, 3], "effective_from": d3_str},
+        )
+        assert s3_res.status_code == 200
+        assert s3_res.json()["pending_schedule"]["effective_from"] == d1_str  # D1 is earlier than D3
 
 # ── 4. USER TIMEZONE D1/D2 TESTS ─────────────────────────────
 

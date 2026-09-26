@@ -94,7 +94,7 @@ async def recalculate_habit_aggregates(db: AsyncSession, habit_id: UUID, user: U
                 # Skipped does not break the streak, does not add to it.
                 continue
             else:
-                # MISSED or missing occurrence (which means not completed/skipped/pending-today)
+                # SKIPPED, MISSED, or missing occurrence (which means not completed)
                 current_broken = True
                 current_run = 0
 
