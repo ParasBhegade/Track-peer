@@ -34,5 +34,33 @@ services:
       - "${MAILPIT_SMTP_PORT:-1025}:1025"
       - "${MAILPIT_UI_PORT:-8025}:8025"
 
+  celery-worker:
+    build:
+      context: ./backend
+    command: celery -A app.worker worker --loglevel=info
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-habittracker}:${POSTGRES_PASSWORD:-habittracker_dev}@postgres:5432/${POSTGRES_DB:-habittracker}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: ./backend
+    command: celery -A app.worker beat --loglevel=info
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-habittracker}:${POSTGRES_PASSWORD:-habittracker_dev}@postgres:5432/${POSTGRES_DB:-habittracker}
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
 volumes:
   pg_data:

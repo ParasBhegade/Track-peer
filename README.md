@@ -17,12 +17,14 @@ docker compose up -d
 
 This starts:
 
-| Service    | Port  | Purpose              |
-|------------|-------|----------------------|
-| PostgreSQL | 5432  | Primary database     |
-| Redis      | 6379  | Cache / job broker   |
-| Mailpit    | 8025  | Dev email UI         |
-| Mailpit    | 1025  | Dev SMTP             |
+| Service       | Port  | Purpose              |
+|---------------|-------|----------------------|
+| PostgreSQL    | 5432  | Primary database     |
+| Redis         | 6379  | Cache / job broker   |
+| Mailpit       | 8025  | Dev email UI         |
+| Mailpit       | 1025  | Dev SMTP             |
+| celery-worker | -     | Background jobs      |
+| celery-beat   | -     | Job scheduler        |
 
 ### 2. Backend setup
 

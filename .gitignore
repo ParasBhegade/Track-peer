@@ -85,3 +85,6 @@ docker-compose.override.yml
 *.log
 *.bak
 *.tmp
+token.json
+err.txt
+err2.txt
