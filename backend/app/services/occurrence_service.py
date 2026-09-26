@@ -77,11 +77,13 @@ async def rollover_and_generate_for_user(db: AsyncSession, user: User) -> None:
         await generate_today_if_due(db, user, habit)
 
 
-async def cancel_future_pending(db: AsyncSession, user: User, habit_id: UUID) -> None:
-    today = _get_local_today(user)
+async def cancel_future_pending(
+    db: AsyncSession, user: User, habit_id: UUID, from_date: date | None = None
+) -> None:
+    cutoff = from_date if from_date is not None else _get_local_today(user)
     stmt = delete(Occurrence).where(
         Occurrence.habit_id == habit_id,
-        Occurrence.occurrence_date >= today,
+        Occurrence.occurrence_date >= cutoff,
         Occurrence.status == OccurrenceStatus.pending,
     )
     await db.execute(stmt)

@@ -368,3 +368,50 @@ async def test_nonexistent_occurrence_rejected(client: AsyncClient, token: str):
     
     res = await client.put(f"/api/v1/occurrences/{occ_id}", headers=headers, json={"status": "completed"})
     assert res.status_code == 404
+
+
+async def test_schedule_edit_does_not_remove_today_occurrence(client: AsyncClient, token: str):
+    """Editing a schedule for tomorrow must not touch today's occurrence.
+
+    Regression test: cancel_future_pending was previously called with a
+    fixed >= today cutoff from update_schedule too, which deleted
+    today's still-pending occurrence on every schedule edit.
+    """
+    today = datetime.now(ZoneInfo("UTC")).date()
+
+    res = await client.post(
+        "/api/v1/habits",
+        headers=auth_headers(token),
+        json={
+            "name": "Schedule Edit Habit",
+            "frequency": "daily",
+            "days_of_week": [0, 1, 2, 3, 4, 5, 6],
+            "start_date": today.isoformat(),
+        },
+    )
+    assert res.status_code == 201
+    habit_id = res.json()["id"]
+
+    # Confirm today's occurrence exists before the edit
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    assert len(res.json()["occurrences"]) == 1
+    occ_id_before = res.json()["occurrences"][0]["id"]
+
+    tomorrow = today + timedelta(days=1)
+    s_res = await client.put(
+        f"/api/v1/habits/{habit_id}/schedule",
+        headers=auth_headers(token),
+        json={
+            "frequency": "weekdays",
+            "days_of_week": [0, 1, 2, 3, 4],
+            "effective_from": tomorrow.isoformat(),
+        },
+    )
+    assert s_res.status_code == 200
+
+    # Today's occurrence must still be there, same id, still pending
+    res = await client.get("/api/v1/today", headers=auth_headers(token))
+    occs = res.json()["occurrences"]
+    assert len(occs) == 1, "Today's occurrence was wrongly deleted by a future-dated schedule edit"
+    assert occs[0]["id"] == occ_id_before
+    assert occs[0]["status"] == "pending"

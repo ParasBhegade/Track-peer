@@ -183,7 +183,7 @@ async def update_schedule(db: AsyncSession, habit_id: UUID, user: User, payload:
 
     # Delete stale PENDING future occurrences
     from app.services.occurrence_service import cancel_future_pending
-    await cancel_future_pending(db, user, habit.id)
+    await cancel_future_pending(db, user, habit.id, from_date=effective_from)
 
     await db.commit()
     await db.refresh(habit, ["schedules"])
