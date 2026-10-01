@@ -1,5 +1,6 @@
 """Habit service — CRUD and schedule versioning."""
 
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -45,21 +46,30 @@ def _normalize_frequency(frequency: FrequencyEnum, days: list[int]) -> tuple[Fre
     return frequency, days
 
 
+def resolve_schedule(schedules: Sequence[Schedule], target_date: date) -> Schedule | None:
+    """
+    Return the schedule with the greatest effective_from <= target_date.
+    If multiple exist, select the latest effective_from that is <= target_date.
+    Never select a schedule with effective_from > target_date.
+    Returns None if no schedule took effect by the target date.
+    """
+    sorted_schedules = sorted(schedules, key=lambda s: s.effective_from, reverse=True)
+    for s in sorted_schedules:
+        if s.effective_from <= target_date:
+            return s
+    return None
+
+
 def _attach_schedules(habit: Habit, user: User) -> Habit:
     today = _get_local_today(user)
     
-    # Sort schedules by effective_from DESC to be safe
-    sorted_schedules = sorted(habit.schedules, key=lambda s: s.effective_from, reverse=True)
-    
-    # active
-    past_or_present = [s for s in sorted_schedules if s.effective_from <= today]
-    if past_or_present:
-        habit.schedule = past_or_present[0]  # type: ignore[attr-defined]
-    else:
-        habit.schedule = sorted_schedules[-1] if sorted_schedules else None  # type: ignore[attr-defined]
+    habit.schedule = resolve_schedule(habit.schedules, today)  # type: ignore[attr-defined]
+    if getattr(habit, "schedule", None) is None and habit.schedules:
+        sorted_schedules = sorted(habit.schedules, key=lambda s: s.effective_from)
+        habit.schedule = sorted_schedules[0]  # type: ignore[attr-defined]
         
     # pending
-    future = sorted([s for s in sorted_schedules if s.effective_from > today], key=lambda s: s.effective_from)
+    future = sorted([s for s in habit.schedules if s.effective_from > today], key=lambda s: s.effective_from)
     if future:
         habit.pending_schedule = future[0]  # type: ignore[attr-defined]
     else:
@@ -268,16 +278,9 @@ async def create_habit_from_sheet(db: AsyncSession, user: User, payload: HabitFr
 async def schedule_for(db: AsyncSession, habit_id: UUID, target_date: date) -> Schedule | None:
     """
     Return the schedule with the greatest effective_from <= target_date.
-    If multiple exist, select the latest effective_from that is <= target_date.
-    Never select a schedule with effective_from > target_date.
-    Returns None if no schedule took effect by the target date.
+    Delegates to the shared pure schedule resolver.
     """
-    stmt = (
-        select(Schedule)
-        .where(Schedule.habit_id == habit_id)
-        .where(Schedule.effective_from <= target_date)
-        .order_by(Schedule.effective_from.desc())
-        .limit(1)
-    )
+    stmt = select(Schedule).where(Schedule.habit_id == habit_id)
     result = await db.execute(stmt)
-    return result.scalar_one_or_none()
+    schedules = result.scalars().all()
+    return resolve_schedule(schedules, target_date)

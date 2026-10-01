@@ -6,12 +6,14 @@ import { fetchOccurrences, Occurrence, updateOccurrence, OccurrenceStatus } from
 import { colors, typography, spacing } from '../theme';
 import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, startOfWeek, endOfWeek, addDays, subDays, addWeeks, subWeeks } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
+import { reconcile } from '../notifications/reconcile';
 
 type ViewMode = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 
 export const CalendarScreen = ({ navigation }: any) => {
   const [viewMode, setViewMode] = useState<ViewMode>('MONTHLY');
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [userInteracted, setUserInteracted] = useState(false);
   const [calendarData, setCalendarData] = useState<CalendarSummaryResponse | null>(null);
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,22 +47,31 @@ export const CalendarScreen = ({ navigation }: any) => {
 
   useFocusEffect(
     useCallback(() => {
-      loadData(selectedDate);
-    }, [selectedDate, viewMode])
+      let dateToLoad = selectedDate;
+      const now = new Date();
+      // If the user hasn't explicitly clicked a date, and the day rolled over,
+      // automatically bring them to "today" when returning to the tab.
+      if (!userInteracted && !isSameDay(now, selectedDate)) {
+        dateToLoad = now;
+        setSelectedDate(now);
+      }
+      loadData(dateToLoad);
+    }, [selectedDate, viewMode, userInteracted])
   );
   
-  const goPrevMonth = () => setSelectedDate(subMonths(selectedDate, 1));
-  const goNextMonth = () => setSelectedDate(addMonths(selectedDate, 1));
-  const goPrevWeek = () => setSelectedDate(subWeeks(selectedDate, 1));
-  const goNextWeek = () => setSelectedDate(addWeeks(selectedDate, 1));
-  const goPrevDay = () => setSelectedDate(subDays(selectedDate, 1));
-  const goNextDay = () => setSelectedDate(addDays(selectedDate, 1));
+  const goPrevMonth = () => { setUserInteracted(true); setSelectedDate(subMonths(selectedDate, 1)); };
+  const goNextMonth = () => { setUserInteracted(true); setSelectedDate(addMonths(selectedDate, 1)); };
+  const goPrevWeek = () => { setUserInteracted(true); setSelectedDate(subWeeks(selectedDate, 1)); };
+  const goNextWeek = () => { setUserInteracted(true); setSelectedDate(addWeeks(selectedDate, 1)); };
+  const goPrevDay = () => { setUserInteracted(true); setSelectedDate(subDays(selectedDate, 1)); };
+  const goNextDay = () => { setUserInteracted(true); setSelectedDate(addDays(selectedDate, 1)); };
 
   const handleMutation = async (occ: Occurrence, newStatus: OccurrenceStatus) => {
     const idempotencyKey = uuidv4();
     try {
       setOccurrences(prev => prev.map(o => o.id === occ.id ? { ...o, status: newStatus } : o));
       await updateOccurrence(occ.id, newStatus, idempotencyKey);
+      await reconcile();
       loadData(selectedDate);
     } catch (error) {
       loadData(selectedDate);
@@ -175,7 +186,10 @@ export const CalendarScreen = ({ navigation }: any) => {
                <TouchableOpacity 
                  key={dStr} 
                  style={[styles.weekDayCard, isSel && styles.weekDayCardSel]}
-                 onPress={() => setSelectedDate(d)}
+                 onPress={() => {
+                   setUserInteracted(true);
+                   setSelectedDate(d);
+                 }}
                >
                  <Text style={styles.weekDayName}>{format(d, 'E').toUpperCase()}</Text>
                  <Text style={styles.weekDayNum}>{format(d, 'dd')}</Text>
@@ -237,6 +251,7 @@ export const CalendarScreen = ({ navigation }: any) => {
                   key={dStr} 
                   style={[styles.dayCell, bgStyle, !isCurrentMonth && styles.dayCellMuted]}
                   onPress={() => {
+                    setUserInteracted(true);
                     setSelectedDate(day);
                     setViewMode('DAILY');
                   }}

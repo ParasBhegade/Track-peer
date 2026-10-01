@@ -1,15 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, SafeAreaView } from 'react-native';
 import { fetchToday, updateOccurrence, TodayResponse, Occurrence } from '../api/occurrences';
 import { colors, typography, spacing } from '../theme';
 import 'react-native-get-random-values';
 import { v4 as uuidv4 } from 'uuid';
 import { MaterialIcons } from '@expo/vector-icons';
+import { reconcile } from '../notifications/reconcile';
+import { AuthContext } from '../AuthContext';
 
 export const TodayScreen = ({ navigation }: any) => {
   const [data, setData] = useState<TodayResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { logout } = React.useContext(AuthContext);
 
   const loadData = useCallback(async () => {
     try {
@@ -24,9 +28,11 @@ export const TodayScreen = ({ navigation }: any) => {
     }
   }, []);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
 
   const handleMutation = async (occ: Occurrence, newStatus: Occurrence['status']) => {
     if (!data) return;
@@ -51,6 +57,7 @@ export const TodayScreen = ({ navigation }: any) => {
 
       const key = uuidv4();
       await updateOccurrence(occ.id, newStatus, key);
+      await reconcile();
       
       // We could reload data here from backend to ensure perfect consistency, 
       // but optimistic UI is acceptable if it succeeds.
@@ -89,10 +96,9 @@ export const TodayScreen = ({ navigation }: any) => {
           <Text style={styles.brandText}>HABIT TRACKER</Text>
           <Text style={styles.headerTitle}>HOME</Text>
         </View>
-        <View style={styles.profileCircle}>
-           {/* Fallback to simple icon if image missing */}
-           <MaterialIcons name="person" size={24} color={colors.primary} />
-        </View>
+        <TouchableOpacity style={styles.profileCircle} onPress={logout}>
+           <MaterialIcons name="logout" size={20} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>

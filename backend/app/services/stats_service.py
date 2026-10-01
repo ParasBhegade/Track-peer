@@ -16,9 +16,11 @@ from app.schemas.stats import (
     HabitStatsResponse,
 )
 from app.services.habit_service import _get_local_today
+from app.services.occurrence_service import rollover_and_generate_for_user
 
 
 async def get_calendar_summary(db: AsyncSession, user: User, year: int, month: int) -> CalendarSummaryResponse:
+    await rollover_and_generate_for_user(db, user)
     if month < 1 or month > 12:
         raise AppError(400, "validation_error", "Invalid month")
         
@@ -68,6 +70,8 @@ async def get_calendar_summary(db: AsyncSession, user: User, year: int, month: i
 
 
 async def get_habit_stats(db: AsyncSession, user: User, habit_id: UUID) -> HabitStatsResponse:
+    await rollover_and_generate_for_user(db, user)
+    
     stmt = select(Habit).where(Habit.id == habit_id)
     habit = (await db.execute(stmt)).scalar_one_or_none()
     
@@ -116,6 +120,8 @@ async def get_habit_stats(db: AsyncSession, user: User, habit_id: UUID) -> Habit
 
 
 async def get_account_stats(db: AsyncSession, user: User) -> AccountStatsResponse:
+    await rollover_and_generate_for_user(db, user)
+    
     today = _get_local_today(user)
     monday = today - timedelta(days=today.weekday())
     

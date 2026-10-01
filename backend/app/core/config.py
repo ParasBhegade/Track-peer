@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     JWT_REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # ── CORS ─────────────────────────────────────────────
-    CORS_ORIGINS: list[str] = ["http://localhost:8081", "http://localhost:19006"]
+    CORS_ORIGINS: list[str] = ["http://localhost:8081", "http://localhost:19006", "http://192.168.42.199:8081"]
 
     # ── Email (Mailpit in dev) ───────────────────────────
     SMTP_HOST: str = "localhost"

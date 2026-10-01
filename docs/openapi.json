@@ -789,6 +789,75 @@
         "title": "RegisterRequest",
         "type": "object"
       },
+      "ReminderItem": {
+        "properties": {
+          "habit_id": {
+            "format": "uuid",
+            "title": "Habit Id",
+            "type": "string"
+          },
+          "habit_name": {
+            "title": "Habit Name",
+            "type": "string"
+          },
+          "notification_id": {
+            "title": "Notification Id",
+            "type": "string"
+          },
+          "occurrence_date": {
+            "format": "date",
+            "title": "Occurrence Date",
+            "type": "string"
+          },
+          "reminder_time": {
+            "format": "time",
+            "title": "Reminder Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id",
+          "habit_id",
+          "habit_name",
+          "occurrence_date",
+          "reminder_time"
+        ],
+        "title": "ReminderItem",
+        "type": "object"
+      },
+      "ReminderPlanResponse": {
+        "properties": {
+          "from": {
+            "format": "date",
+            "title": "From",
+            "type": "string"
+          },
+          "reminders": {
+            "items": {
+              "$ref": "#/components/schemas/ReminderItem"
+            },
+            "title": "Reminders",
+            "type": "array"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "to": {
+            "format": "date",
+            "title": "To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "timezone",
+          "from",
+          "to",
+          "reminders"
+        ],
+        "title": "ReminderPlanResponse",
+        "type": "object"
+      },
       "ResetPasswordRequest": {
         "properties": {
           "new_password": {
@@ -2147,6 +2216,79 @@
           }
         ],
         "summary": "Update Occurrence"
+      }
+    },
+    "/api/v1/reminders/plan": {
+      "get": {
+        "description": "Get the plan of scheduled local reminders for the authenticated user.",
+        "operationId": "get_reminder_plan_api_v1_reminders_plan_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReminderPlanResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Reminder Plan",
+        "tags": [
+          "reminders"
+        ]
       }
     },
     "/api/v1/stats/overview": {

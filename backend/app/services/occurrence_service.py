@@ -1,6 +1,6 @@
 """Occurrence service — Phase 4 Core Tracking Engine."""
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -52,13 +52,12 @@ async def generate_today_if_due(db: AsyncSession, user: User, habit: Habit) -> N
 
 async def rollover_and_generate_for_user(db: AsyncSession, user: User) -> None:
     today = _get_local_today(user)
-    yesterday = today - timedelta(days=1)
 
-    # 1. Roll over yesterday's pending to missed
+    # 1. Roll over ALL past pending to missed
     stmt_missed = (
         update(Occurrence)
         .where(
-            Occurrence.occurrence_date == yesterday,
+            Occurrence.occurrence_date < today,
             Occurrence.status == OccurrenceStatus.pending,
             Occurrence.habit_id.in_(
                 select(Habit.id).where(Habit.user_id == user.id, Habit.archived_at.is_(None))
@@ -76,6 +75,8 @@ async def rollover_and_generate_for_user(db: AsyncSession, user: User) -> None:
     for habit in habits:
         await generate_today_if_due(db, user, habit)
 
+    await db.commit()
+
 
 async def cancel_future_pending(
     db: AsyncSession, user: User, habit_id: UUID, from_date: date | None = None
@@ -90,6 +91,9 @@ async def cancel_future_pending(
 
 
 async def get_today(db: AsyncSession, user: User) -> TodayResponse:
+    # Ensure current day occurrences are generated lazily since we can't guarantee hourly cron on local environments
+    await rollover_and_generate_for_user(db, user)
+    
     today = _get_local_today(user)
 
     stmt = (
@@ -141,6 +145,9 @@ async def get_today(db: AsyncSession, user: User) -> TodayResponse:
 async def get_occurrences(
     db: AsyncSession, user: User, from_date: date, to_date: date, habit_id: UUID | None = None
 ) -> OccurrenceListResponse:
+    # Ensure current day occurrences are generated lazily
+    await rollover_and_generate_for_user(db, user)
+
     # Inclusive calendar days = (to_date - from_date).days + 1
     # 92 inclusive calendar days = 91 days difference
     if (to_date - from_date).days > 91:

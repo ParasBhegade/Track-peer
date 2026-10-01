@@ -2,16 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useFonts, SpaceGrotesk_700Bold, SpaceGrotesk_600SemiBold } from '@expo-google-fonts/space-grotesk';
 import { Inter_400Regular } from '@expo-google-fonts/inter';
-import { login } from './src/api/auth';
+import { login, logout as logoutApi } from './src/api/auth';
 import { colors, typography, spacing } from './src/theme';
 import { TodayScreen } from './src/features/TodayScreen';
 import { CalendarScreen } from './src/features/CalendarScreen';
 import { StatsScreen } from './src/features/StatsScreen';
 import { HabitDetailsScreen } from './src/features/HabitDetailsScreen';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
+import { AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import { reconcile, clearAllHabitNotifications } from './src/notifications/reconcile';
+
+import { AuthContext } from './src/AuthContext';
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
+
+export const navigationRef = createNavigationContainerRef();
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -27,7 +44,7 @@ function HomeStack() {
 
 function AuthenticatedApp() {
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
@@ -73,6 +90,37 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
 
+  useEffect(() => {
+    const responseListener = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data?.screen === 'today') {
+        if (navigationRef.isReady()) {
+          navigationRef.navigate('Today' as never);
+        }
+      }
+    });
+
+    return () => {
+      responseListener.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!authenticated) return;
+    
+    reconcile();
+
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        reconcile();
+      }
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, [authenticated]);
+
   if (!fontsLoaded) {
     return (
       <View style={styles.center}>
@@ -80,6 +128,12 @@ export default function App() {
       </View>
     );
   }
+
+  const handleLogout = async () => {
+    await clearAllHabitNotifications();
+    await logoutApi();
+    setAuthenticated(false);
+  };
 
   const handleLogin = async () => {
     try {
@@ -143,7 +197,11 @@ export default function App() {
     );
   }
 
-  return <AuthenticatedApp />;
+  return (
+    <AuthContext.Provider value={{ logout: handleLogout }}>
+      <AuthenticatedApp />
+    </AuthContext.Provider>
+  );
 }
 
 const styles = StyleSheet.create({

@@ -42,13 +42,10 @@ async def recalculate_habit_aggregates(db: AsyncSession, habit_id: UUID, user: U
     # To strictly follow "while scheduled occurrence exists: occurrence = occurrence for date",
     # we can iterate scheduled dates backward.
     
-    schedules = sorted(habit.schedules, key=lambda s: s.effective_from, reverse=True)
+    from app.services.habit_service import resolve_schedule
     
     def get_applicable_schedule(d: date) -> Schedule | None:
-        for s in schedules:
-            if s.effective_from <= d:
-                return s
-        return None
+        return resolve_schedule(habit.schedules, d)
 
     # Generate scheduled dates backward from today down to start_date
     scheduled_dates = []
