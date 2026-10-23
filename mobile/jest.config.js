@@ -14,6 +14,7 @@ module.exports = {
     "node_modules/(?!(react-native|@react-native|@testing-library|expo|expo-.*|@expo|uuid)/)"
   ],
   moduleNameMapper: {
-    "^expo-constants$": "<rootDir>/__mocks__/expo-constants.js"
+    "^expo-constants$": "<rootDir>/__mocks__/expo-constants.js",
+    "^expo-secure-store$": "<rootDir>/__mocks__/expo-secure-store.js"
   }
 };

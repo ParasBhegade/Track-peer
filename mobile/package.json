@@ -16,6 +16,7 @@
     "expo-dev-client": "~57.0.19",
     "expo-device": "~57.0.2",
     "expo-notifications": "~57.0.21",
+    "expo-secure-store": "~57.0.4",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",
     "react-native": "0.86.3",
@@ -34,6 +35,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "test": "jest",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
